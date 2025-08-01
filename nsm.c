@@ -302,7 +302,9 @@ static int nsm_open(struct nsm *nsm, struct config *cfg)
 	}
 	nsm->port_identity.portNumber = 1;
 
-	nsm->tsproc = tsproc_create(TSPROC_RAW, FILTER_MOVING_AVERAGE, 10);
+	nsm->tsproc = tsproc_create(TSPROC_RAW, TSPROC_RAW,
+		                        FILTER_MOVING_AVERAGE, FILTER_MOVING_MEDIAN,
+								10, 1);
 	if (!nsm->tsproc) {
 		pr_err("failed to create time stamp processor");
 		goto no_tsproc;

@@ -228,6 +228,17 @@ The length of the delay filter in samples.
 The default is 10.
 
 .TP
+.B offset_filter
+Select the algorithm used to filter the measured offset and peer delay. Possible
+values are moving_average and moving_median.
+The default is moving_median.
+
+.TP
+.B offset_filter_length
+The length of the offset filter in samples.
+The default is 1 (no filter).
+
+.TP
 .B delay_mechanism
 
 Select the delay mechanism. Possible values are Auto, COMMON_P2P, E2E,
@@ -533,6 +544,12 @@ well when the rate of sync messages (logSyncInterval) is similar to the rate of
 delay messages (logMinDelayReqInterval or logMinPdelayReqInterval). Weighting
 is useful with larger network jitters (e.g. software time stamping).
 The default is filter.
+
+.TP
+.B offset_filter_mode
+Similar to tsproc_mode, but for offset calculation only. Possible values are
+raw or filter. Raw uses always raw offset. Filter uses filtered offset.
+Default is raw.
 
 .TP
 .B udp_ttl

@@ -3740,8 +3740,11 @@ struct port *port_open(const char *phc_device,
 		config_get_int(cfg, p->name, "fault_reset_interval");
 
 	p->tsproc = tsproc_create(config_get_int(cfg, p->name, "tsproc_mode"),
+				  config_get_int(cfg, p->name, "offset_filter_mode"),
+				  config_get_int(cfg, p->name, "offset_filter"),
 				  config_get_int(cfg, p->name, "delay_filter"),
-				  config_get_int(cfg, p->name, "delay_filter_length"));
+				  config_get_int(cfg, p->name, "delay_filter_length"),
+				  config_get_int(cfg, p->name, "offset_filter_length"));
 	if (!p->tsproc) {
 		pr_err("Failed to create time stamp processor");
 		goto err_uc_service;

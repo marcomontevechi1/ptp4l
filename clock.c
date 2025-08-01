@@ -1377,8 +1377,11 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 		c->dscmp = dscmp;
 	}
 	c->tsproc = tsproc_create(config_get_int(config, NULL, "tsproc_mode"),
+				  config_get_int(config, NULL, "offset_filter_mode"),
 				  config_get_int(config, NULL, "delay_filter"),
-				  config_get_int(config, NULL, "delay_filter_length"));
+				  config_get_int(config, NULL, "offset_filter"),
+				  config_get_int(config, NULL, "delay_filter_length"),
+				  config_get_int(config, NULL, "offset_filter_length"));
 	if (!c->tsproc) {
 		pr_err("Failed to create time stamp processor");
 		return NULL;

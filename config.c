@@ -179,7 +179,7 @@ static struct config_enum dataset_comp_enu[] = {
 	{ NULL, 0 },
 };
 
-static struct config_enum delay_filter_enu[] = {
+static struct config_enum params_filter_enu[] = {
 	{ "moving_average", FILTER_MOVING_AVERAGE },
 	{ "moving_median",  FILTER_MOVING_MEDIAN  },
 	{ NULL, 0 },
@@ -275,8 +275,10 @@ struct config_item config_tab[] = {
 	PORT_ITEM_STR("cmlds.server_address", "/var/run/cmlds_server"),
 	GLOB_ITEM_ENU("dataset_comparison", DS_CMP_IEEE1588, dataset_comp_enu),
 	PORT_ITEM_INT("delayAsymmetry", 0, INT_MIN, INT_MAX),
-	PORT_ITEM_ENU("delay_filter", FILTER_MOVING_MEDIAN, delay_filter_enu),
+	PORT_ITEM_ENU("delay_filter", FILTER_MOVING_MEDIAN, params_filter_enu),
 	PORT_ITEM_INT("delay_filter_length", 10, 1, INT_MAX),
+	PORT_ITEM_ENU("offset_filter", FILTER_MOVING_MEDIAN, params_filter_enu),
+	PORT_ITEM_INT("offset_filter_length", 1, 1, INT_MAX),
 	PORT_ITEM_ENU("delay_mechanism", DM_E2E, delay_mech_enu),
 	PORT_ITEM_INT("delay_response_timeout", 0, 0, UINT8_MAX),
 	GLOB_ITEM_INT("dscp_event", 0, 0, 63),
@@ -383,6 +385,7 @@ struct config_item config_tab[] = {
 	GLOB_ITEM_INT("ts2phc.pulsewidth", 500000000, 1000000, 999000000),
 	GLOB_ITEM_STR("ts2phc.tod_source", "generic"),
 	PORT_ITEM_ENU("tsproc_mode", TSPROC_FILTER, tsproc_enu),
+	PORT_ITEM_ENU("offset_filter_mode", TSPROC_RAW, tsproc_enu),
 	GLOB_ITEM_INT("twoStepFlag", 1, 0, 1),
 	GLOB_ITEM_INT("tx_timestamp_timeout", 10, 1, INT_MAX),
 	PORT_ITEM_INT("udp_ttl", 1, 1, 255),

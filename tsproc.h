@@ -39,11 +39,16 @@ enum tsproc_mode {
  * Create a new instance of the time stamp processor.
  * @param mode           Time stamp processing mode.
  * @param delay_filter   Type of the filter that will be applied to delay.
+ * @param offset_filter  Type of the filter that will be applied to offset.
  * @param filter_length  Length of the filter.
  * @return               A pointer to a new tsproc on success, NULL otherwise.
  */
 struct tsproc *tsproc_create(enum tsproc_mode mode,
-			     enum filter_type delay_filter, int filter_length);
+				 enum filter_type offset_mode,
+				 enum filter_type delay_filter,
+				 enum filter_type offset_filter,
+				 int delay_filter_length,
+				 int offset_filter_length);
 
 /**
  * Destroy a time stamp processor.

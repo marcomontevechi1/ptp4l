@@ -26,7 +26,8 @@
 
 struct tsproc {
 	/* Processing options */
-	enum tsproc_mode mode;
+	enum tsproc_mode delay_mode;
+	enum tsproc_mode offset_mode;
 
 	/* Current ratio between remote and local clock frequency */
 	double clock_rate_ratio;
@@ -39,17 +40,20 @@ struct tsproc {
 	tmv_t t3;
 	tmv_t t4;
 
-	/* Current filtered delay */
+	/* Current filtered delay and offset */
 	tmv_t filtered_delay;
+	tmv_t filtered_offset;
 	int filtered_delay_valid;
+	int filtered_offset_valid;
 
-	/* Delay filter */
+	/* Delay and offset filters */
 	struct filter *delay_filter;
+	struct filter *offset_filter;
 };
 
 static int weighting(struct tsproc *tsp)
 {
-	switch (tsp->mode) {
+	switch (tsp->delay_mode) {
 	case TSPROC_FILTER:
 	case TSPROC_RAW:
 		return 0;
@@ -60,8 +64,28 @@ static int weighting(struct tsproc *tsp)
 	return 0;
 }
 
-struct tsproc *tsproc_create(enum tsproc_mode mode,
-			     enum filter_type delay_filter, int filter_length)
+static bool set_mode(enum tsproc_mode *mode_ptr, enum tsproc_mode mode, bool allowed_weight) {
+	switch (mode) {
+	case TSPROC_FILTER:
+	case TSPROC_RAW:
+		*mode_ptr = mode;
+		return true;
+	case TSPROC_FILTER_WEIGHT:
+	case TSPROC_RAW_WEIGHT:
+		if (!allowed_weight) return false;
+		*mode_ptr = mode;
+		return true;
+	default:
+		return false;
+	}
+}
+
+struct tsproc *tsproc_create(enum tsproc_mode delay_mode,
+				 enum filter_type offset_mode,
+			     enum filter_type delay_filter,
+				 enum filter_type offset_filter,
+				 int delay_filter_length,
+				 int offset_filter_length)
 {
 	struct tsproc *tsp;
 
@@ -69,20 +93,14 @@ struct tsproc *tsproc_create(enum tsproc_mode mode,
 	if (!tsp)
 		return NULL;
 
-	switch (mode) {
-	case TSPROC_FILTER:
-	case TSPROC_RAW:
-	case TSPROC_FILTER_WEIGHT:
-	case TSPROC_RAW_WEIGHT:
-		tsp->mode = mode;
-		break;
-	default:
+	if ( (!set_mode(&tsp->delay_mode, delay_mode, true)) || (!set_mode(&tsp->offset_mode, offset_mode, false)) ) {
 		free(tsp);
 		return NULL;
 	}
 
-	tsp->delay_filter = filter_create(delay_filter, filter_length);
-	if (!tsp->delay_filter) {
+	tsp->delay_filter = filter_create(delay_filter, delay_filter_length);
+	tsp->offset_filter = filter_create(offset_filter, offset_filter_length);
+	if ( (!tsp->delay_filter) || (!tsp->offset_filter) ) {
 		free(tsp);
 		return NULL;
 	}
@@ -95,6 +113,7 @@ struct tsproc *tsproc_create(enum tsproc_mode mode,
 void tsproc_destroy(struct tsproc *tsp)
 {
 	filter_destroy(tsp->delay_filter);
+	filter_destroy(tsp->offset_filter);
 	free(tsp);
 }
 
@@ -164,7 +183,7 @@ int tsproc_update_delay(struct tsproc *tsp, tmv_t *delay)
 		return 0;
 	}
 
-	switch (tsp->mode) {
+	switch (tsp->delay_mode) {
 	case TSPROC_FILTER:
 	case TSPROC_FILTER_WEIGHT:
 		*delay = tsp->filtered_delay;
@@ -181,11 +200,12 @@ int tsproc_update_delay(struct tsproc *tsp, tmv_t *delay)
 int tsproc_update_offset(struct tsproc *tsp, tmv_t *offset, double *weight)
 {
 	tmv_t delay = tmv_zero(), raw_delay = tmv_zero();
+	tmv_t raw_offset = tmv_zero();
 
 	if (tmv_is_zero(tsp->t1) || tmv_is_zero(tsp->t2))
 		return -1;
 
-	switch (tsp->mode) {
+	switch (tsp->delay_mode) {
 	case TSPROC_FILTER:
 		if (!tsp->filtered_delay_valid) {
 			return -1;
@@ -208,9 +228,29 @@ int tsproc_update_offset(struct tsproc *tsp, tmv_t *offset, double *weight)
 		delay = tsp->filtered_delay;
 		break;
 	}
-
 	/* offset = t2 - t1 - delay */
-	*offset = tmv_sub(tmv_sub(tsp->t2, tsp->t1), delay);
+	raw_offset = tmv_sub(tmv_sub(tsp->t2, tsp->t1), delay);
+	tsp->filtered_offset = filter_sample(tsp->offset_filter, raw_offset);
+	tsp->filtered_offset_valid = 1;
+
+	/* weighting modes are handled as simple raw offset */
+	switch (tsp->offset_mode) {
+	case TSPROC_FILTER:
+		if (!tsp->filtered_offset_valid) {
+			return -1;
+		}
+		*offset = tsp->filtered_offset;
+		break;
+	case TSPROC_RAW:
+	case TSPROC_RAW_WEIGHT:
+	case TSPROC_FILTER_WEIGHT:
+		*offset = raw_offset;
+		break;
+	}
+
+	pr_debug("offset   filtered %10" PRId64 "   raw %10" PRId64,
+		 tmv_to_nanoseconds(tsp->filtered_offset),
+		 tmv_to_nanoseconds(raw_offset));
 
 	if (!weight)
 		return 0;
@@ -237,6 +277,8 @@ void tsproc_reset(struct tsproc *tsp, int full)
 	if (full) {
 		tsp->clock_rate_ratio = 1.0;
 		filter_reset(tsp->delay_filter);
+		filter_reset(tsp->offset_filter);
 		tsp->filtered_delay_valid = 0;
+		tsp->filtered_offset_valid = 0;
 	}
 }
